@@ -195,10 +195,10 @@ class ParticleFilter:
     def normalize_particles(self):
         
         norm = 1 / sum(part.w for part in self.particle_cloud)
-        print(norm)
+        #print(norm)
         for part in self.particle_cloud:
             part.w = norm * part.w
-            print(part.w)
+            #print(part.w)
         
         return
         
@@ -229,8 +229,14 @@ class ParticleFilter:
 
 
     def resample_particles(self):
+        
+        #create array of weights
+        weights = [part.w for part in self.particle_cloud]
 
-        # TODO
+        #draw a random sample of num_particle particles from the particle cloud
+        #where probability are the weights
+        self.particle_cloud = draw_random_sample(self.num_particles,
+                self.particle_cloud, weights)
         return 
 
 
@@ -325,6 +331,9 @@ class ParticleFilter:
 
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
+
+        #calculate robot motion
+        #generate a normal distribution for each axis of motion 
 
         # TODO
         return
