@@ -316,7 +316,22 @@ class ParticleFilter:
     def update_estimated_robot_pose(self):
         # based on the particles within the particle cloud, update the robot pose estimate
         
-        # TODO
+        #for now, make this a weighted average of all the particles poses
+        #create array of weights
+
+        sum_x = 0
+        sum_y = 0
+        #TODO figure out how to aggregate quanternion
+
+        for part in self.particle_cloud:
+            sum_x += part.pose.position.x * part.w
+            sum_y += part.pose.position.y * part.w
+        
+        #function for weight average
+        
+
+
+
         return
 
     
