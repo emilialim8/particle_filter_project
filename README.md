@@ -1,6 +1,7 @@
 # particle_filter_project
 
 ##  Implementation Plan
+Emilia Lim and Sam Nitkin
 
 ### How will you initialize your particle cloud (initialize_particle_cloud)?
 Generate a random distribution of particles over the space is the number of particles proportional to the size of the space.
