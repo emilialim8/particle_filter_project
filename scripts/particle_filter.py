@@ -321,17 +321,25 @@ class ParticleFilter:
 
         sum_x = 0
         sum_y = 0
+        yaw_array = []
+        weight_array = []
         #TODO figure out how to aggregate quanternion
 
         for part in self.particle_cloud:
             sum_x += part.pose.position.x * part.w
             sum_y += part.pose.position.y * part.w
+            yaw_array.append(get_yaw_from_pose(part.pose))
+            weight_array.append(part.w)
         
+        #divide, this works because the weights are normalized
+        x_mean = sum_x / self.num_particles
+        y_mean = sum_y / self.num_particles
+        yaw_mean = astropy.stats.circmean(yaw_array, weights = weight_array)
+        #convert yaw to qunaternion and set it
+
+        #TODO set the pose
+
         #function for weight average
-        
-
-
-
         return
 
     
