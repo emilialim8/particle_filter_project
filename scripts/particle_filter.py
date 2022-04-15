@@ -38,7 +38,7 @@ def draw_random_sample():
     We recommend that you fill in this function using random_sample.
     """
     # TODO
-    return
+    return 
 
 
 class Particle:
