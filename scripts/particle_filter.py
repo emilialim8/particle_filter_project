@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from cmath import pi
 import rospy
 
 from nav_msgs.msg import OccupancyGrid
@@ -16,7 +17,7 @@ import numpy as np
 from numpy.random import random_sample
 import math
 
-from random import randint, random
+from random import randint, random, uniform
 
 
 
@@ -33,13 +34,27 @@ def get_yaw_from_pose(p):
     return yaw
 
 
-def draw_random_sample():
+def draw_random_sample(n, choices, probs):
     """ Draws a random sample of n elements from a given list of choices and their specified probabilities.
     We recommend that you fill in this function using random_sample.
+
+    n- number of elements to draw
+    choices - the choices to draw from
+    probs - their relative probabilties
+
+    returns the random sample
+    tested and works
     """
     # TODO
     return 
 
+"""
+for testing draw_random_sample
+samp_array = ["a", "b", "c", "d"]
+samp_weight = [.5, .25, .25, 0]
+ret = draw_random_sample(20, samp_array, samp_weight)
+print(ret)
+"""
 
 class Particle:
 
@@ -75,7 +90,8 @@ class ParticleFilter:
         self.map = OccupancyGrid()
 
         # the number of particles used in the particle filter
-        self.num_particles = 10000
+        self.num_particles = 10
+        #they have it at 10000, TODO change back
 
         # initialize the particle cloud array
         self.particle_cloud = []
@@ -112,6 +128,14 @@ class ParticleFilter:
         # intialize the particle cloud
         self.initialize_particle_cloud()
 
+        '''
+        for testing particle cloud intialization
+        print("particle cloud intialized")
+        for i in range(10):
+            print(self.particle_cloud[i].pose.position)
+            print(self.particle_cloud[i].pose.orientation)
+        '''
+
         self.initialized = True
 
 
@@ -123,7 +147,44 @@ class ParticleFilter:
 
     def initialize_particle_cloud(self):
         
-        # TODO
+        #min and max coordinates from map
+        #max_width = self.map.info.width
+        #max_height = self.map.info.height
+        max_width = 100
+        max_height = 50
+
+        #iterate through number of particles to 
+        #randomly intialize each particle
+        for i in range(self.num_particles):
+            this_point = Point()
+
+            #random x in map
+            this_point.x = randint(0, max_width - 1)
+
+            #random y in map
+            this_point.y = randint(0, max_height - 1)
+            this_point.z = 0 #2D
+
+            #yaw is the angle between -pi and pi 
+            yaw = uniform(-np.pi, np.pi)
+
+            #intialize quanternion with converted yaw, yay math
+            this_quant = Quaternion(*quaternion_from_euler(0,0,yaw))
+
+            #create pose from position and quanternion
+            this_pose = Pose(position = this_point, orientation = this_quant)
+
+            #create particle from pose and uniform weight
+            this_part = Particle(pose = this_pose, w = 1)
+
+            #add to array
+            self.particle_cloud.append(this_part)
+
+
+        
+        #draw random points from range
+        #draw random quaterions from range
+        #set weights to 1/number of particles
 
 
         self.normalize_particles()
@@ -132,9 +193,15 @@ class ParticleFilter:
 
 
     def normalize_particles(self):
-        # make all the particle weights sum to 1.0
         
-        # TODO
+        norm = 1 / sum(part.w for part in self.particle_cloud)
+        #print(norm)
+        for part in self.particle_cloud:
+            part.w = norm * part.w
+            #print(part.w)
+        
+        return
+        
 
 
 
@@ -162,8 +229,15 @@ class ParticleFilter:
 
 
     def resample_particles(self):
+        
+        #create array of weights
+        weights = [part.w for part in self.particle_cloud]
 
-        # TODO
+        #draw a random sample of num_particle particles from the particle cloud
+        #where probability are the weights
+        self.particle_cloud = draw_random_sample(self.num_particles,
+                self.particle_cloud, weights)
+        return 
 
 
 
@@ -242,14 +316,37 @@ class ParticleFilter:
     def update_estimated_robot_pose(self):
         # based on the particles within the particle cloud, update the robot pose estimate
         
-        # TODO
+        #for now, make this a weighted average of all the particles poses
+        #create array of weights
 
+        sum_x = 0
+        sum_y = 0
+        yaw_array = []
+        weight_array = []
+        #TODO figure out how to aggregate quanternion
+
+        for part in self.particle_cloud:
+            sum_x += part.pose.position.x * part.w
+            sum_y += part.pose.position.y * part.w
+            yaw_array.append(get_yaw_from_pose(part.pose))
+            weight_array.append(part.w)
+        
+        #divide, this works because the weights are normalized
+        x_mean = sum_x / self.num_particles
+        y_mean = sum_y / self.num_particles
+        yaw_mean = astropy.stats.circmean(yaw_array, weights = weight_array)
+        #convert yaw to qunaternion and set it
+
+        #TODO set the pose
+
+        #function for weight average
+        return
 
     
     def update_particle_weights_with_measurement_model(self, data):
 
         # TODO
-
+        return
 
         
 
@@ -258,8 +355,11 @@ class ParticleFilter:
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
 
-        # TODO
+        #calculate robot motion
+        #generate a normal distribution for each axis of motion 
 
+        # TODO
+        return
 
 
 if __name__=="__main__":
@@ -268,6 +368,8 @@ if __name__=="__main__":
     pf = ParticleFilter()
 
     rospy.spin()
+
+    
 
 
 
