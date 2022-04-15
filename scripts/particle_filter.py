@@ -117,7 +117,9 @@ class ParticleFilter:
 
         # inialize our map and likelihood field
         self.map = OccupancyGrid()
+        print("map intialized")
         self.likelihood_field = LikelihoodField()
+        print("map and field intialized")
 
         # the number of particles used in the particle filter
         self.num_particles = 10
@@ -157,10 +159,10 @@ class ParticleFilter:
 
         # intialize the particle cloud
         self.initialize_particle_cloud()
-
+        print("particle cloud intialized")
         '''
         for testing particle cloud intialization
-        print("particle cloud intialized")
+        
         for i in range(10):
             print(self.particle_cloud[i].pose.position)
             print(self.particle_cloud[i].pose.orientation)
@@ -305,6 +307,8 @@ class ParticleFilter:
 
         if self.particle_cloud:
 
+            print("main robot time")
+
             # check to see if we've moved far enough to perform an update
 
             curr_x = self.odom_pose.pose.position.x
@@ -427,7 +431,7 @@ class ParticleFilter:
         sd_xy = 0.1
         sd_yaw = np.pi/180 #about 1 degree
        
-         for part in self.particle_cloud:
+        for part in self.particle_cloud:
 
             #Do we need error checking for the edge of the map?
             part.pose.position.x += np.random.normal(x_move, sd_xy)
