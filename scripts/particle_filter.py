@@ -46,8 +46,8 @@ def draw_random_sample(n, choices, probs):
     returns the random sample
     tested and works
     """
-    # TODO
-    return 
+    sample = numpy.random.choice(choices, size = n, replace = True, p = probs)
+    return sample
 
 """
 for testing draw_random_sample
