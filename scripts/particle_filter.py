@@ -58,6 +58,25 @@ def draw_random_sample(n, choices, probs):
     sample = np.random.choice(choices, size = n, replace = True, p = probs)
     return sample
 
+
+def normalize_radian(rad):
+    """Recursive function to normalize a radian so
+    it is between (-pi, pi]
+    
+    rad - an angle in radians"""
+    pi2 = 2 * np.pi
+    
+    #if angle is too big, subtract 2pi
+    if rad > np.pi:
+        rad -= pi2
+        rad = normalize_radian(rad)
+    
+    #if angle is too small, add 2pi
+    if rad <= (-1 * np.pi):
+        rad += pi2
+        rad = normalize_radian(rad)
+    return(rad)
+
 """
 for testing draw_random_sample
 samp_array = ["a", "b", "c", "d"]
@@ -222,8 +241,6 @@ class ParticleFilter:
         self.particles_pub.publish(particle_cloud_pose_array)
 
 
-
-
     def publish_estimated_robot_pose(self):
 
         robot_pose_estimate_stamped = PoseStamped()
@@ -297,13 +314,17 @@ class ParticleFilter:
             curr_yaw = get_yaw_from_pose(self.odom_pose.pose)
             old_yaw = get_yaw_from_pose(self.odom_pose_last_motion_update.pose)
 
-            if (np.abs(curr_x - old_x) > self.lin_mvmt_threshold or 
-                np.abs(curr_y - old_y) > self.lin_mvmt_threshold or
-                np.abs(curr_yaw - old_yaw) > self.ang_mvmt_threshold):
+            x_move = np.abs(curr_x - old_x)
+            y_move = np.abs(curr_y - old_y)
+            yaw_move = np.abs(curr_yaw - old_yaw)
+
+            if (x_move > self.lin_mvmt_threshold or 
+                y_move > self.lin_mvmt_threshold or
+                yaw_move > self.ang_mvmt_threshold):
 
                 # This is where the main logic of the particle filter is carried out
 
-                self.update_particles_with_motion_model()
+                self.update_particles_with_motion_model(x_move, y_move, yaw_move)
 
                 self.update_particle_weights_with_measurement_model(data)
 
@@ -330,8 +351,10 @@ class ParticleFilter:
         sum_y = 0
         yaw_array = []
         weight_array = []
-        #TODO figure out how to aggregate quanternion
 
+        #loop through patricle cloud
+        #getting weighted sum of x and y
+        #and an array of the yaws and weights
         for part in self.particle_cloud:
             sum_x += part.pose.position.x * part.w
             sum_y += part.pose.position.y * part.w
@@ -341,12 +364,15 @@ class ParticleFilter:
         #divide, this works because the weights are normalized
         x_mean = sum_x / self.num_particles
         y_mean = sum_y / self.num_particles
+
+        #to aggregate yaw, need weighted circular mean
         yaw_mean = astropy.stats.circmean(yaw_array, weights = weight_array)
-        #convert yaw to qunaternion and set it
-
-        #TODO set the pose
-
-        #function for weight average
+        #quanternion with converted yaw, yay math
+        self.robot_estimate.orientation = Quaternion(
+            *quaternion_from_euler(0,0,yaw_mean))
+            #can you just make a new line like this in python
+        self.robot_estimate.position.x = x_mean
+        self.robot_estimate.position.y = y_mean
         return
 
     
@@ -356,50 +382,62 @@ class ParticleFilter:
         if not(self.initialized):
             return
 
-        
-
-        # TODO: Let's pretend that our robot and particles only can sense 
-        #       in 4 directions to simplify the problem for the sake of this
-        #       exercise. Compute the importance weights (w) for the 4 particles 
+        #       Compute the importance weights (w) for the particles 
         #       in this environment using the likelihood field measurement
         #       algorithm. 
     
+        #loop through particle cloud
         for part in self.particle_cloud:
             q = 1 
             print(part)
             for k in range(0,359): #for all 360 degrees
+                #z is the measurement at range k
                 z = data.ranges[k]
                 print(k)
+                #theta is the particles current yaw
                 theta = euler_from_quaternion([
                     part.pose.orientation.x, 
                     part.pose.orientation.y, 
                     part.pose.orientation.z, 
                     part.pose.orientation.w])[2]
-                if z == np.inf:
-                    z = 3.5
-                if z != np.inf:
+                if z == 0:
+                    z = 3.5 
+                if z != 0: #TODO redunant code, ask Emilia
+                    #translate and rotate minimum values to x and y of particle
                     x = part.pose.position.x + z * np.cos(theta + k*np.pi/180)
                     y = part.pose.position.y + z * np.sin(theta + k*np.pi/180)
 
+                    #calculate the mimimum distance at each end point using helper function
                     dist = self.likelihood_field.get_closest_obstacle_distance(x,y)
-                
-                    print(compute_prob_zero_centered_gaussian(dist, 0.1))
-                    q = q * compute_prob_zero_centered_gaussian(dist, 0.1)
+
+                    #TODO incorporate random and miss z probabilities
+                    sd_scan = 0.1
+                    print(compute_prob_zero_centered_gaussian(dist, sd_scan))
+                    q = q * compute_prob_zero_centered_gaussian(dist, sd_scan)
                     print(q)
             part.w = q
         return
 
         
 
-    def update_particles_with_motion_model(self):
+    def update_particles_with_motion_model(self, x_move, y_move, yaw_move):
 
-        # based on the how the robot has moved (calculated from its odometry), we'll  move
-        # all of the particles correspondingly
+        #set standard deviations for measurement noise from odometry
+        #generate gaussians centered on movements
+        sd_xy = 0.1
+        sd_yaw = np.pi/180 #about 1 degree
+       
+         for part in self.particle_cloud:
 
-        #calculate robot motion
-        #generate a normal distribution for each axis of motion 
+            #Do we need error checking for the edge of the map?
+            part.pose.position.x += np.random.normal(x_move, sd_xy)
+            part.pose.position.y += np.random.normal(y_move, sd_xy)
 
-        # TODO
+            part_yaw = get_yaw_from_pose(part.pose)
+
+            #if yaw falls outside of (-pi, pi], renormalize back inside range
+            part_yaw += normalize_radian(np.random.normal(yaw_move, sd_yaw))
+            part.pose.orientation = Quaternion(*quaternion_from_euler(0,0,part_yaw))
         return
 
 
