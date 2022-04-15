@@ -18,6 +18,8 @@ from numpy.random import random_sample
 import math
 import astropy 
 
+from likelihood_field import LikelihoodField
+
 from random import randint, random, uniform
 
 
@@ -34,6 +36,13 @@ def get_yaw_from_pose(p):
 
     return yaw
 
+def compute_prob_zero_centered_gaussian(dist, sd):
+    # from class exercise
+    """ Takes in distance from zero (dist) and standard deviation (sd) for gaussian
+        and returns probability (likelihood) of observation """
+    c = 1.0 / (sd * math.sqrt(2 * math.pi))
+    prob = c * math.exp((-math.pow(dist,2))/(2 * math.pow(sd, 2)))
+    return prob
 
 def draw_random_sample(n, choices, probs):
     """ Draws a random sample of n elements from a given list of choices and their specified probabilities.
@@ -46,7 +55,7 @@ def draw_random_sample(n, choices, probs):
     returns the random sample
     tested and works
     """
-    sample = numpy.random.choice(choices, size = n, replace = True, p = probs)
+    sample = np.random.choice(choices, size = n, replace = True, p = probs)
     return sample
 
 """
@@ -87,8 +96,9 @@ class ParticleFilter:
         self.odom_frame = "odom"
         self.scan_topic = "scan"
 
-        # inialize our map
+        # inialize our map and likelihood field
         self.map = OccupancyGrid()
+        self.likelihood_field = LikelihoodField()
 
         # the number of particles used in the particle filter
         self.num_particles = 10
@@ -342,7 +352,41 @@ class ParticleFilter:
     
     def update_particle_weights_with_measurement_model(self, data):
 
-        # TODO
+        # wait until initialization is complete
+        if not(self.initialized):
+            return
+
+        
+
+        # TODO: Let's pretend that our robot and particles only can sense 
+        #       in 4 directions to simplify the problem for the sake of this
+        #       exercise. Compute the importance weights (w) for the 4 particles 
+        #       in this environment using the likelihood field measurement
+        #       algorithm. 
+    
+        for part in self.particle_cloud:
+            q = 1 
+            print(part)
+            for k in range(0,359): #for all 360 degrees
+                z = data.ranges[k]
+                print(k)
+                theta = euler_from_quaternion([
+                    part.pose.orientation.x, 
+                    part.pose.orientation.y, 
+                    part.pose.orientation.z, 
+                    part.pose.orientation.w])[2]
+                if z == np.inf:
+                    z = 3.5
+                if z != np.inf:
+                    x = part.pose.position.x + z * np.cos(theta + k*np.pi/180)
+                    y = part.pose.position.y + z * np.sin(theta + k*np.pi/180)
+
+                    dist = self.likelihood_field.get_closest_obstacle_distance(x,y)
+                
+                    print(compute_prob_zero_centered_gaussian(dist, 0.1))
+                    q = q * compute_prob_zero_centered_gaussian(dist, 0.1)
+                    print(q)
+            part.w = q
         return
 
         
