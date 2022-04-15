@@ -16,6 +16,7 @@ from tf.transformations import quaternion_from_euler, euler_from_quaternion
 import numpy as np
 from numpy.random import random_sample
 import math
+import astropy 
 
 from random import randint, random, uniform
 
@@ -181,12 +182,6 @@ class ParticleFilter:
             self.particle_cloud.append(this_part)
 
 
-        
-        #draw random points from range
-        #draw random quaterions from range
-        #set weights to 1/number of particles
-
-
         self.normalize_particles()
 
         self.publish_particle_cloud()
@@ -229,6 +224,8 @@ class ParticleFilter:
 
 
     def resample_particles(self):
+        
+        #TODO test this code
         
         #create array of weights
         weights = [part.w for part in self.particle_cloud]
