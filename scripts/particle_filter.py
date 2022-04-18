@@ -440,7 +440,7 @@ class ParticleFilter:
             part_yaw = get_yaw_from_pose(part.pose)
 
             #if yaw falls outside of (-pi, pi], renormalize back inside range
-            part_yaw += normalize_radian(np.random.normal(yaw_move, sd_yaw))
+            part_yaw += np.random.normal(yaw_move, sd_yaw)
             part.pose.orientation = Quaternion(*quaternion_from_euler(0,0,part_yaw))
         return
 
