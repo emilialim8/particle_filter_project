@@ -115,11 +115,14 @@ class ParticleFilter:
         self.odom_frame = "odom"
         self.scan_topic = "scan"
 
+
+
         # inialize our map and likelihood field
         self.map = OccupancyGrid()
         print("map intialized")
         self.likelihood_field = LikelihoodField()
         print("map and field intialized")
+
 
         # the number of particles used in the particle filter
         self.num_particles = 10
@@ -157,16 +160,20 @@ class ParticleFilter:
         self.tf_broadcaster = TransformBroadcaster()
 
 
+        print("width: " + str(self.map.info.width) + ", height: " + str(self.map.info.width) )
+        print("origin " + str(self.map.info.origin.position.x) + ", " +str(self.map.info.origin.position.y))
+        
+
         # intialize the particle cloud
         self.initialize_particle_cloud()
         print("particle cloud intialized")
-        '''
-        for testing particle cloud intialization
+        
+        #for testing particle cloud intialization
         
         for i in range(10):
             print(self.particle_cloud[i].pose.position)
             print(self.particle_cloud[i].pose.orientation)
-        '''
+        
 
         self.initialized = True
 
@@ -175,6 +182,10 @@ class ParticleFilter:
     def get_map(self, data):
 
         self.map = data
+
+        print("width: " + str(self.map.info.width) + ", height: " + str(self.map.info.width) )
+        print("origin " + str(self.map.info.origin.position.x) + ", " +str(self.map.info.origin.position.y))
+        
     
 
     def initialize_particle_cloud(self):
