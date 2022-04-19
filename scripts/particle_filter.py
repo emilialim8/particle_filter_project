@@ -193,8 +193,8 @@ class ParticleFilter:
         #min and max coordinates from map
         #max_width = self.map.info.width
         #max_height = self.map.info.height
-        max_width = 100
-        max_height = 50
+        max_width = 10
+        max_height = 10
 
         #iterate through number of particles to 
         #randomly intialize each particle
