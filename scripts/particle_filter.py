@@ -116,6 +116,11 @@ class ParticleFilter:
         self.scan_topic = "scan"
 
 
+        # subscribe to the map server
+        rospy.Subscriber(self.map_topic, OccupancyGrid, self.get_map)
+
+        # subscribe to the lidar scan from the robot
+        rospy.Subscriber(self.scan_topic, LaserScan, self.robot_scan_received)
 
         # inialize our map and likelihood field
         self.map = OccupancyGrid()
@@ -125,7 +130,7 @@ class ParticleFilter:
 
 
         # the number of particles used in the particle filter
-        self.num_particles = 10
+        self.num_particles = 100
         #they have it at 10000, TODO change back
 
         # initialize the particle cloud array
@@ -149,12 +154,6 @@ class ParticleFilter:
         # publish the estimated robot pose
         self.robot_estimate_pub = rospy.Publisher("estimated_robot_pose", PoseStamped, queue_size=10)
 
-        # subscribe to the map server
-        rospy.Subscriber(self.map_topic, OccupancyGrid, self.get_map)
-
-        # subscribe to the lidar scan from the robot
-        rospy.Subscriber(self.scan_topic, LaserScan, self.robot_scan_received)
-
         # enable listening for and broadcasting corodinate transforms
         self.tf_listener = TransformListener()
         self.tf_broadcaster = TransformBroadcaster()
@@ -169,10 +168,13 @@ class ParticleFilter:
         print("particle cloud intialized")
         
         #for testing particle cloud intialization
-        
+        r = rospy.Rate(1)
+
         for i in range(10):
             print(self.particle_cloud[i].pose.position)
             print(self.particle_cloud[i].pose.orientation)
+            r.sleep()
+            self.publish_particle_cloud()
         
 
         self.initialized = True
@@ -188,13 +190,17 @@ class ParticleFilter:
         
     
 
+
     def initialize_particle_cloud(self):
-        
+ 
         #min and max coordinates from map
-        #max_width = self.map.info.width
-        #max_height = self.map.info.height
-        max_width = 10
-        max_height = 10
+        res = self.map.info.resolution
+        max_width = self.map.info.width
+        max_height = self.map.info.height
+        origin_x = self.map.info.origin.position.x
+        origin_y = self.map.info.origin.position.y
+        #max_width = 10
+        #max_height = 10
 
         #iterate through number of particles to 
         #randomly intialize each particle
@@ -202,11 +208,14 @@ class ParticleFilter:
             this_point = Point()
 
             #random x in map
-            this_point.x = randint(0, max_width - 1)
-
+            this_point.x = (randint(0, 60) * res + origin_x) 
+            #this_point.x = rand.uniform(0,3)
+            #this_point.y = rand.uniform(0,4)
             #random y in map
-            this_point.y = randint(0, max_height - 1)
+            this_point.y = (randint(0, 60) * res + origin_y) 
             this_point.z = 0 #2D
+            #this_point.x = 0
+            #this_point.y = 0
 
             #yaw is the angle between -pi and pi 
             yaw = uniform(-np.pi, np.pi)
@@ -350,6 +359,7 @@ class ParticleFilter:
                 self.update_estimated_robot_pose()
 
                 self.publish_particle_cloud()
+                print("pubblished particle cloud")
                 self.publish_estimated_robot_pose()
 
                 self.odom_pose_last_motion_update = self.odom_pose
@@ -403,12 +413,10 @@ class ParticleFilter:
     
         #loop through particle cloud
         for part in self.particle_cloud:
-            q = 1 
-            print(part)
+            q = 1
             for k in range(0,359): #for all 360 degrees
                 #z is the measurement at range k
                 z = data.ranges[k]
-                print(k)
                 #theta is the particles current yaw
                 theta = euler_from_quaternion([
                     part.pose.orientation.x, 
@@ -427,9 +435,9 @@ class ParticleFilter:
 
                     #TODO incorporate random and miss z probabilities
                     sd_scan = 0.1
-                    print(compute_prob_zero_centered_gaussian(dist, sd_scan))
+                    #print(compute_prob_zero_centered_gaussian(dist, sd_scan))
                     q = q * compute_prob_zero_centered_gaussian(dist, sd_scan)
-                    print(q)
+                    #print(q)
             part.w = q
         return
 
