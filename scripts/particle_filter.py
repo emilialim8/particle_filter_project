@@ -16,7 +16,7 @@ from tf.transformations import quaternion_from_euler, euler_from_quaternion
 import numpy as np
 from numpy.random import random_sample
 import math
-import astropy 
+from scipy.stats import circmean 
 
 from likelihood_field import LikelihoodField
 
@@ -140,7 +140,7 @@ class ParticleFilter:
         self.robot_estimate = Pose()
 
         # set threshold values for linear and angular movement before we preform an update
-        self.lin_mvmt_threshold = 0.2        
+        self.lin_mvmt_threshold = 0.1        
         self.ang_mvmt_threshold = (np.pi / 6)
 
         self.odom_pose_last_motion_update = None
@@ -208,11 +208,11 @@ class ParticleFilter:
             this_point = Point()
 
             #random x in map
-            this_point.x = (randint(0, 60) * res + origin_x) 
-            #this_point.x = rand.uniform(0,3)
-            #this_point.y = rand.uniform(0,4)
+            #this_point.x = (randint(0, 60) * res + origin_x) 
+            this_point.x = uniform(-2,2)
+            this_point.y = uniform(-2.5,1.5)
             #random y in map
-            this_point.y = (randint(0, 60) * res + origin_y) 
+            #this_point.y = (randint(0, 60) * res + origin_y) 
             this_point.z = 0 #2D
             #this_point.x = 0
             #this_point.y = 0
@@ -325,7 +325,7 @@ class ParticleFilter:
             return
 
 
-        if self.particle_cloud:
+        if self.particle_cloud[0]:
 
             print("main robot time")
 
@@ -345,19 +345,20 @@ class ParticleFilter:
             if (x_move > self.lin_mvmt_threshold or 
                 y_move > self.lin_mvmt_threshold or
                 yaw_move > self.ang_mvmt_threshold):
+                print("updating particles")
 
                 # This is where the main logic of the particle filter is carried out
 
                 self.update_particles_with_motion_model(x_move, y_move, yaw_move)
-
+                print("updated motion")
                 self.update_particle_weights_with_measurement_model(data)
-
+                print("updated weight")
                 self.normalize_particles()
-
+                print("Normalized")
                 self.resample_particles()
-
+                print("resampled")
                 self.update_estimated_robot_pose()
-
+                print("updated estimation")
                 self.publish_particle_cloud()
                 print("pubblished particle cloud")
                 self.publish_estimated_robot_pose()
@@ -391,7 +392,7 @@ class ParticleFilter:
         y_mean = sum_y / self.num_particles
 
         #to aggregate yaw, need weighted circular mean
-        yaw_mean = astropy.stats.circmean(yaw_array, weights = weight_array)
+        yaw_mean = 0 #circmean(yaw_array, weights = weight_array)
         #quanternion with converted yaw, yay math
         self.robot_estimate.orientation = Quaternion(
             *quaternion_from_euler(0,0,yaw_mean))
@@ -414,7 +415,7 @@ class ParticleFilter:
         #loop through particle cloud
         for part in self.particle_cloud:
             q = 1
-            for k in range(0,359): #for all 360 degrees
+            for k in [0,90,180,270]: #for all 360 degrees
                 #z is the measurement at range k
                 z = data.ranges[k]
                 #theta is the particles current yaw
@@ -422,10 +423,8 @@ class ParticleFilter:
                     part.pose.orientation.x, 
                     part.pose.orientation.y, 
                     part.pose.orientation.z, 
-                    part.pose.orientation.w])[2]
-                if z == 0:
-                    z = 3.5 
-                if z != 0: #TODO redunant code, ask Emilia
+                    part.pose.orientation.w])[2] 
+                if z != 0: 
                     #translate and rotate minimum values to x and y of particle
                     x = part.pose.position.x + z * np.cos(theta + k*np.pi/180)
                     y = part.pose.position.y + z * np.sin(theta + k*np.pi/180)
@@ -439,6 +438,7 @@ class ParticleFilter:
                     q = q * compute_prob_zero_centered_gaussian(dist, sd_scan)
                     #print(q)
             part.w = q
+            print(q)
         return
 
         
