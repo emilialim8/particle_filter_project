@@ -20,8 +20,7 @@ from scipy.stats import circmean
 
 from likelihood_field import LikelihoodField
 
-from random import randint, random, uniform
-
+from random import randint, random, uniform, choices
 
 
 def get_yaw_from_pose(p):
@@ -77,13 +76,14 @@ def normalize_radian(rad):
         rad = normalize_radian(rad)
     return(rad)
 
-"""
-for testing draw_random_sample
+'''
+#for testing draw_random_sample
 samp_array = ["a", "b", "c", "d"]
 samp_weight = [.5, .25, .25, 0]
-ret = draw_random_sample(20, samp_array, samp_weight)
-print(ret)
-"""
+for i in range(4):
+    ret = draw_random_sample(20, samp_array, samp_weight)   
+    print(ret)
+'''
 
 class Particle:
 
@@ -130,7 +130,7 @@ class ParticleFilter:
 
 
         # the number of particles used in the particle filter
-        self.num_particles = 100
+        self.num_particles = 500
         #they have it at 10000, TODO change back
 
         # initialize the particle cloud array
@@ -174,6 +174,7 @@ class ParticleFilter:
             print(self.particle_cloud[i].pose.position)
             print(self.particle_cloud[i].pose.orientation)
             r.sleep()
+            #publish to make sure robot has time to publish
             self.publish_particle_cloud()
         
 
@@ -239,13 +240,21 @@ class ParticleFilter:
 
 
     def normalize_particles(self):
-        
+        print("length of particle cloud")
+        print(len(self.particle_cloud))
+        print("sum of weights before normalized:")
+        print(sum(part.w for part in self.particle_cloud))
         norm = 1 / sum(part.w for part in self.particle_cloud)
-        #print(norm)
+        print("normalizer:")
+        print(norm)
         for part in self.particle_cloud:
-            part.w = norm * part.w
+            weight = 0
+            weight = norm * part.w
+
+            part.w = weight
             #print(part.w)
-        
+        print("sum of weights after normalized:")
+        print(sum(part.w for part in self.particle_cloud))
         return
         
 
@@ -278,11 +287,26 @@ class ParticleFilter:
         
         #create array of weights
         weights = [part.w for part in self.particle_cloud]
-
+        print("sum of weights:")
+        print(sum(weights))
         #draw a random sample of num_particle particles from the particle cloud
         #where probability are the weights
-        self.particle_cloud = draw_random_sample(self.num_particles,
-                self.particle_cloud, weights)
+        #MOVE THIS TO OTHER FUNCTION
+        new_cloud = []
+        for i in range(self.num_particles):
+            this_choice = choices(self.particle_cloud, weights, k = 1)[0]
+
+            new_pos = Point(x = this_choice.pose.position.x,
+                            y = this_choice.pose.position.y,
+                            z = 0)
+            new_orientation = Quaternion(x = 0,y=0,
+                                z = this_choice.pose.orientation.z,
+                                w = this_choice.pose.orientation.w)
+            pose = Pose(new_pos, new_orientation)
+            w = this_choice.w
+            new_part = Particle(pose,w)
+            new_cloud.append(new_part)
+        self.particle_cloud = new_cloud
         return 
 
 
@@ -356,6 +380,12 @@ class ParticleFilter:
                 self.normalize_particles()
                 print("Normalized")
                 self.resample_particles()
+                '''
+                for i in range(10):
+                    print(self.particle_cloud[i].pose.position)
+                    print(self.particle_cloud[i].pose.orientation)'''
+
+
                 print("resampled")
                 self.update_estimated_robot_pose()
                 print("updated estimation")
@@ -391,8 +421,8 @@ class ParticleFilter:
         x_mean = sum_x / self.num_particles
         y_mean = sum_y / self.num_particles
 
-        #to aggregate yaw, need weighted circular mean
-        yaw_mean = 0 #circmean(yaw_array, weights = weight_array)
+        #to aggregate yaw use circular mean
+        yaw_mean = circmean(yaw_array) 
         #quanternion with converted yaw, yay math
         self.robot_estimate.orientation = Quaternion(
             *quaternion_from_euler(0,0,yaw_mean))
@@ -413,9 +443,10 @@ class ParticleFilter:
         #       algorithm. 
     
         #loop through particle cloud
+        num_nan = 0
         for part in self.particle_cloud:
             q = 1
-            for k in [0,90,180,270]: #for all 360 degrees
+            for k in range(360): #for all 360 degrees
                 #z is the measurement at range k
                 z = data.ranges[k]
                 #theta is the particles current yaw
@@ -431,14 +462,18 @@ class ParticleFilter:
 
                     #calculate the mimimum distance at each end point using helper function
                     dist = self.likelihood_field.get_closest_obstacle_distance(x,y)
-
+                    if math.isnan(dist):
+                        dist = 3.5
+                        num_nan+=1
                     #TODO incorporate random and miss z probabilities
                     sd_scan = 0.1
                     #print(compute_prob_zero_centered_gaussian(dist, sd_scan))
                     q = q * compute_prob_zero_centered_gaussian(dist, sd_scan)
                     #print(q)
             part.w = q
-            print(q)
+            #print(q)
+        print("number of nans:")
+        print(num_nan)
         return
 
         
@@ -456,7 +491,7 @@ class ParticleFilter:
             part.pose.position.x += np.random.normal(x_move, sd_xy)
             part.pose.position.y += np.random.normal(y_move, sd_xy)
 
-            part_yaw = get_yaw_from_pose(part.pose)
+            part_yaw = -1*get_yaw_from_pose(part.pose)
 
             #if yaw falls outside of (-pi, pi], renormalize back inside range
             part_yaw += np.random.normal(yaw_move, sd_yaw)
