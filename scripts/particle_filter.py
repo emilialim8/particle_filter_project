@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+
+'''TO DO
+- continue calibrating parameters, more angles, num particles, sds
+- initialize particles in maze
+- out of maze checking
+- add noise to liklihood field according to model
+
+'''
 from cmath import pi
 import rospy
 
@@ -130,7 +138,7 @@ class ParticleFilter:
 
 
         # the number of particles used in the particle filter
-        self.num_particles = 500
+        self.num_particles = 5000
         #they have it at 10000, TODO change back
 
         # initialize the particle cloud array
@@ -364,7 +372,7 @@ class ParticleFilter:
 
             x_move = np.abs(curr_x - old_x)
             y_move = np.abs(curr_y - old_y)
-            yaw_move = np.abs(curr_yaw - old_yaw)
+            yaw_move = -1 * normalize_radian(np.abs(curr_yaw - old_yaw))
 
             if (x_move > self.lin_mvmt_threshold or 
                 y_move > self.lin_mvmt_threshold or
@@ -446,7 +454,7 @@ class ParticleFilter:
         num_nan = 0
         for part in self.particle_cloud:
             q = 1
-            for k in range(360): #for all 360 degrees
+            for k in [0,45,90,135,180,225,270,315]: #range(360): #for all 360 degrees
                 #z is the measurement at range k
                 z = data.ranges[k]
                 #theta is the particles current yaw
@@ -482,17 +490,17 @@ class ParticleFilter:
 
         #set standard deviations for measurement noise from odometry
         #generate gaussians centered on movements
-        sd_xy = 0.1
-        sd_yaw = np.pi/180 #about 1 degree
+        sd_xy = 0.2
+        sd_yaw = np.pi/90 #about 1 degree
        
         for part in self.particle_cloud:
 
             #this is the rotate then move than rotate model from class
             #the theta from the robot's current estimated pose
-            theta_robo = get_yaw_from_pose(self.robot_estimate.pose)
+            theta_robo = get_yaw_from_pose(self.odom_pose_last_motion_update.pose)
             theta_part = get_yaw_from_pose(part.pose)
             rot1 = np.arctan2(y_move, x_move) - theta_robo
-            trans = math.sqrt((x_move)^2 + (y_move)^2)
+            trans = math.sqrt((x_move)**2 + (y_move)**2)
             rot2 = yaw_move - rot1
 
             #add noise to each of these movements
@@ -501,8 +509,8 @@ class ParticleFilter:
             trans += np.random.normal(0, sd_xy)
 
             #update the positions
-            part.pose.position.x += trans + math.cos(theta_part + rot1)
-            part.pose.position,y += trans + math.sin(theta_part + rot1)
+            part.pose.position.x += trans * math.cos(theta_part + rot1)
+            part.pose.position.y += trans * math.sin(theta_part + rot1)
             theta_part += rot1 + rot2
 
             part.pose.orientation = Quaternion(*quaternion_from_euler(0,0,theta_part))
