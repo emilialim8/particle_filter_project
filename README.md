@@ -41,3 +41,29 @@ By 4/17, initialize the particle cloud and update particles with motion model
 By end of lab 4/20, have update particles with measurement model working
 By 4/23 have normalizing, resampling, and estimated position ready
 Due April 26, testing and debugging, writeup 
+
+## Writeup
+
+### Objectives Description
+    The goal of this project is to construct a working particle filter that can help a robot estimate it's position in a known maze enviornment. The particle filter is an implementation of the Bayes filter algorithm for solving Robot state estimation problems.
+
+### High-level description
+    Our robot uses a particle filter and known map to estimate its state. We added the map to the robot's knowledge using SLAM in lab. Using object-oriented programming 
+
+### Intialization of Particle Cloud
+
+### Movement Model
+
+### Resampling
+
+### Incorporation of Noise 
+
+### Updating estimated robot pose
+
+### Optimization of parameters
+
+### Challenges
+
+### Future Work
+
+### Takeaways
