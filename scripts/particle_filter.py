@@ -487,15 +487,25 @@ class ParticleFilter:
        
         for part in self.particle_cloud:
 
-            #Do we need error checking for the edge of the map?
-            part.pose.position.x += np.random.normal(x_move, sd_xy)
-            part.pose.position.y += np.random.normal(y_move, sd_xy)
+            #this is the rotate then move than rotate model from class
+            #the theta from the robot's current estimated pose
+            theta_robo = get_yaw_from_pose(self.robot_estimate.pose)
+            theta_part = get_yaw_from_pose(part.pose)
+            rot1 = np.arctan2(y_move, x_move) - theta_robo
+            trans = math.sqrt((x_move)^2 + (y_move)^2)
+            rot2 = yaw_move - rot1
 
-            part_yaw = -1*get_yaw_from_pose(part.pose)
+            #add noise to each of these movements
+            rot1 += np.random.normal(0, sd_yaw)
+            rot2 += np.random.normal(0, sd_yaw)
+            trans += np.random.normal(0, sd_xy)
 
-            #if yaw falls outside of (-pi, pi], renormalize back inside range
-            part_yaw += np.random.normal(yaw_move, sd_yaw)
-            part.pose.orientation = Quaternion(*quaternion_from_euler(0,0,part_yaw))
+            #update the positions
+            part.pose.position.x += trans + math.cos(theta_part + rot1)
+            part.pose.position,y += trans + math.sin(theta_part + rot1)
+            theta_part += rot1 + rot2
+
+            part.pose.orientation = Quaternion(*quaternion_from_euler(0,0,theta_part))
         return
 
 
