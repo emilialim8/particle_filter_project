@@ -119,7 +119,7 @@ class ParticleFilter:
 
         # set the topic names and frame names
         self.base_frame = "base_footprint"
-        self.map_topic = "map"z
+        self.map_topic = "map"
         self.odom_frame = "odom"
         self.scan_topic = "scan"
 
@@ -133,12 +133,13 @@ class ParticleFilter:
         # inialize our map and likelihood field
         self.map = OccupancyGrid()
         print("map intialized")
+        
         self.likelihood_field = LikelihoodField()
         print("map and field intialized")
 
 
         # the number of particles used in the particle filter
-        self.num_particles = 5000
+        self.num_particles = 3000
         #they have it at 10000, TODO change back
 
         # initialize the particle cloud array
@@ -170,7 +171,10 @@ class ParticleFilter:
         print("width: " + str(self.map.info.width) + ", height: " + str(self.map.info.width) )
         print("origin " + str(self.map.info.origin.position.x) + ", " +str(self.map.info.origin.position.y))
         
-
+        self.grid = np.array(self.map.data)
+        print("the gird is")
+        print(self.grid)
+        
         # intialize the particle cloud
         self.initialize_particle_cloud()
         print("particle cloud intialized")
@@ -255,21 +259,22 @@ class ParticleFilter:
         #max_height = self.map.info.height
         origin_x = self.map.info.origin.position.x
         origin_y = self.map.info.origin.position.y
+        grid = self.grid
 
         weight_sum = 0
         for part in self.particle_cloud:
             
 
             #convert particle poses from meters to pixels
-            pixel_x = (part.pose.position.x - origin_x) / res
-            pixel_y = (part.pose.position.y - origin_y) / res
+            pixel_x = int((part.pose.position.x - origin_x) / res)
+            pixel_y = int((part.pose.position.y - origin_y) / res)
             index = pixel_x + pixel_y * max_width
-            if(self.map.data[index] < 0):
+            if(grid[index] < 0):
                 part.w = 0
             weight_sum += part.w
 
-        norm = 1 / weight_su
-
+        norm = 1 / weight_sum
+ 
         
         for part in self.particle_cloud:
             part.w = norm * part.w
@@ -467,7 +472,7 @@ class ParticleFilter:
         #loop through particle cloud
         for part in self.particle_cloud:
             q = 1
-            for k in [0,45,90,135,180,225,270,315]: #range(360): #for all 360 degrees
+            for k in [0, 90, 180, 270]: #[0,45,90,135,180,225,270,315]: #range(360): #for all 360 degrees
                 #z is the measurement at range k
                 z = data.ranges[k]
                 #theta is the particles current yaw
