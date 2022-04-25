@@ -215,6 +215,11 @@ class ParticleFilter:
         #max_width = 10
         #max_height = 10
 
+        on_map = []
+        for i in range(len(self.grid)):
+            if (self.grid[i] >= 0):
+                on_map.append(i)
+        print(on_map)
         #iterate through number of particles to 
         #randomly intialize each particle
         for i in range(self.num_particles):
@@ -223,8 +228,9 @@ class ParticleFilter:
             #random x in map
             #this_point.x = (randint(0, 60) * res + origin_x) 
             #these values are hardcoded by examining the boundaries of the map in RVIZ
-            this_point.x = uniform(-2,2)
-            this_point.y = uniform(-2.5,1.5)
+            this_index = choices(on_map)[0]
+            this_point.x = (this_index % max_width) * res + origin_x#int(this_index / max_width) * res +  origin_y
+            this_point.y = int(this_index / max_width) * res + origin_y#(this_index - (this_point.y * max_width)) * res + origin_x
             #random y in map
             #this_point.y = (randint(0, 60) * res + origin_y) 
             this_point.z = 0 #2D
@@ -389,11 +395,11 @@ class ParticleFilter:
 
             x_move = np.abs(curr_x - old_x)
             y_move = np.abs(curr_y - old_y)
-            yaw_move = -1 * normalize_radian(np.abs(curr_yaw - old_yaw))
+            yaw_move = normalize_radian(curr_yaw - old_yaw)
 
             if (x_move > self.lin_mvmt_threshold or 
                 y_move > self.lin_mvmt_threshold or
-                yaw_move > self.ang_mvmt_threshold):
+                np.abs(yaw_move) > self.ang_mvmt_threshold):
                 print("updating particles")
 
                 # This is where the main logic of the particle filter is carried out
@@ -489,17 +495,17 @@ class ParticleFilter:
                     #calculate the mimimum distance at each end point using helper function
                     dist = self.likelihood_field.get_closest_obstacle_distance(x,y)
                     if math.isnan(dist):
-                        dist = 3.5 #haven't been hitting this
-                    
-                    sd_scan = 0.1
+                        q = 0 #dist will be nan if out of the map, so set weight to 0
+                    else:
+                        sd_scan = 0.1
 
-                    #approximation for z hit, z random, and z max probailities of laser scan
-                    zhit = 0.95
-                    zrand = 0.01
-                    zmax = 0.04
-                    #incorporate probability of a random scan or max scan into the weight
-                    q = q * (zhit * compute_prob_zero_centered_gaussian(dist, sd_scan) + (zrand/zmax))
-                    #print(q)
+                        #approximation for z hit, z random, and z max probailities of laser scan
+                        zhit = 0.95
+                        zmax = 0.04
+                        zrand = 0.01
+                        #incorporate probability of a random scan or max scan into the weight
+                        q = q * (zhit * compute_prob_zero_centered_gaussian(dist, sd_scan) + (zrand/zmax))
+                        #print(q)
             part.w = q
             #print(q)
         return
