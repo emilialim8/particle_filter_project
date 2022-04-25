@@ -45,24 +45,46 @@ Due April 26, testing and debugging, writeup
 ## Writeup
 
 ### Objectives Description
-    The goal of this project is to construct a working particle filter that can help a robot estimate it's position in a known maze enviornment. The particle filter is an implementation of the Bayes filter algorithm for solving Robot state estimation problems.
+    
+The goal of this project is to construct a working particle filter that can help a robot estimate it's position in a known maze enviornment. The particle filter is an implementation of the Bayes filter algorithm for solving Robot state estimation problems.
 
 ### High-level description
-    Our robot uses a particle filter and known map to estimate its state. We added the map to the robot's knowledge using SLAM in lab. Using object-oriented programming 
+
+Our robot uses a particle filter and known map to estimate its state. We added the map to the robot's knowledge using SLAM in lab. Using object-oriented programming we intialized a cloud of particles within the confines of our map, giving each a random pose and uniform weight. Particles move following the robots odometry and are weighted using a liklihood field algorithm. Noise is incorporated during both the movement and the liklihood field steps. The weighted particles are then resampled to form a new particle cloud and this process is repeated. The average position of the particle cloud is calculated to form an estimation of the robot's pose.
 
 ### Intialization of Particle Cloud
 
 ### Movement Model
 
+This code is located in the update_particles_with_motion_model() function, with parameters being passed in from robot_scan_recieved(). A helper function, normalize_radian(), is used.
+
+The movement model takes in the robot's odometry to estimate the previous pose and the current pose in robot_scan_recieve(). The change in the robot's position is calculated in terms of x, y, and theta. The theta must be normalized between -pi and pi using the helper function normalize_radian(). updated_particles_with_motion_model() uses the rotate, move, rotate model from class, where each particle is rotated and translated based off the robot's change in position. To each change (rotation 1 & 2, transation x & y), noise is added from a standard distribution centered at zero, with standard deviations calibrated by trial and error. These new x, y, and thetas are added to the particle's current position and converted back to a pose object, updated in the particle cloud.
+
 ### Resampling
+
+The weights of the particles are normalized in normalize_particles() and the particles are resampled in resample_particles(), both of which are called in called in robot_scan_received(). .
+
+To normalize the particles, the normalizer is calculated by taking the inverse of the sum of the weights. Each weight is then multiplied by the normalizer. To resample, we indepently drew particles from the particle cloud using weighted choice N times where N is the number of particles in the cloud. To do this, we used the choices function from the python package random. When a particle is draw, we make a deep copy, intializing a new particle with it's pose and weight to avoid editing the particle directly in the particle cloud. These new particles are used to generate a new particle cloud, which is sent to the robot. 
 
 ### Incorporation of Noise 
 
+Noise is incorporated in two parts of the code, the measurment model (update_particle_weights_with_measurement_model) and the motion model (update_particles_with_motion_model). 
+
+To see how noise is incorporated into the motion model, read the motion model section above.
+
+TODO, measurement model noise
+
 ### Updating estimated robot pose
+
+The robot's pose is estimated in update_estimated_robot_pose() which is called in robot_scan_received(). 
+
+To update the robot's estimated pose, we take the average of the x's, y's and yaws of all the particles (using the cicrular mean function from scipy for the average yaw) and set the robot's estimated pose, converting yaw back to a quanternion using the helper function.
 
 ### Optimization of parameters
 
 ### Challenges
+
+There were several challenges we encountered with this project. Attempting to run the robot with the full number of particles and the liklihood field scanning 360 degrees resulted in many run time errors, and thus we had to decrease values to test it. Another challenge was working with the PGM map and visualization. RVIZ was an unfamiliar tool and the robot lagged in publishing the particle cloud, causing our cloud to either not appear or too show up not centered on our map. An additional big challenged we encounter was with resampling with replacement. Intially, our resampled cloud would duplicate particles, but when we updated the weight of the same particle in two different locations in the cloud, it would update for both particles. Consequently, we had to redo our resampling code to make a new particle cloud with deep copies. The trial and error process for setting parameters also proved to be difficult. Each run of the robot takes a long time to setup, and it is not always clear whether a tweak in a parameter led to improved performance due to the idiosyncratic nature of each run. 
 
 ### Future Work
 
