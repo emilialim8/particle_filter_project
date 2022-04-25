@@ -119,7 +119,7 @@ class ParticleFilter:
 
         # set the topic names and frame names
         self.base_frame = "base_footprint"
-        self.map_topic = "map"
+        self.map_topic = "map"z
         self.odom_frame = "odom"
         self.scan_topic = "scan"
 
@@ -248,21 +248,21 @@ class ParticleFilter:
 
 
     def normalize_particles(self):
-        print("length of particle cloud")
-        print(len(self.particle_cloud))
-        print("sum of weights before normalized:")
-        print(sum(part.w for part in self.particle_cloud))
+        #print("length of particle cloud")
+        #print(len(self.particle_cloud))
+        #print("sum of weights before normalized:")
+        #print(sum(part.w for part in self.particle_cloud))
         norm = 1 / sum(part.w for part in self.particle_cloud)
-        print("normalizer:")
-        print(norm)
+        #print("normalizer:")
+        #print(norm)
         for part in self.particle_cloud:
             weight = 0
             weight = norm * part.w
 
             part.w = weight
             #print(part.w)
-        print("sum of weights after normalized:")
-        print(sum(part.w for part in self.particle_cloud))
+        #print("sum of weights after normalized:")
+        #print(sum(part.w for part in self.particle_cloud))
         return
         
 
@@ -291,12 +291,11 @@ class ParticleFilter:
 
     def resample_particles(self):
         
-        #TODO test this code
-        
+      
         #create array of weights
         weights = [part.w for part in self.particle_cloud]
-        print("sum of weights:")
-        print(sum(weights))
+        #print("sum of weights:")
+        #print(sum(weights))
         #draw a random sample of num_particle particles from the particle cloud
         #where probability are the weights
         #MOVE THIS TO OTHER FUNCTION
@@ -414,16 +413,18 @@ class ParticleFilter:
         sum_x = 0
         sum_y = 0
         yaw_array = []
-        weight_array = []
+        #weight_array = []
 
         #loop through patricle cloud
-        #getting weighted sum of x and y
-        #and an array of the yaws and weights
+        #getting sum of x and y
+        #we are not taking a weighted sum because the particles have
+        #already been resampled
+        #and an array of the yaws
         for part in self.particle_cloud:
-            sum_x += part.pose.position.x * part.w
-            sum_y += part.pose.position.y * part.w
+            sum_x += part.pose.position.x #* part.w
+            sum_y += part.pose.position.y #* part.w
             yaw_array.append(get_yaw_from_pose(part.pose))
-            weight_array.append(part.w)
+            #weight_array.append(part.w)
         
         #divide, this works because the weights are normalized
         x_mean = sum_x / self.num_particles
@@ -451,7 +452,6 @@ class ParticleFilter:
         #       algorithm. 
     
         #loop through particle cloud
-        num_nan = 0
         for part in self.particle_cloud:
             q = 1
             for k in [0,45,90,135,180,225,270,315]: #range(360): #for all 360 degrees
@@ -471,8 +471,7 @@ class ParticleFilter:
                     #calculate the mimimum distance at each end point using helper function
                     dist = self.likelihood_field.get_closest_obstacle_distance(x,y)
                     if math.isnan(dist):
-                        dist = 3.5
-                        num_nan+=1
+                        dist = 3.5 #haven't been hitting this
                     #TODO incorporate random and miss z probabilities
                     sd_scan = 0.1
                     #print(compute_prob_zero_centered_gaussian(dist, sd_scan))
@@ -480,8 +479,6 @@ class ParticleFilter:
                     #print(q)
             part.w = q
             #print(q)
-        print("number of nans:")
-        print(num_nan)
         return
 
         
