@@ -218,6 +218,7 @@ class ParticleFilter:
 
             #random x in map
             #this_point.x = (randint(0, 60) * res + origin_x) 
+            #these values are hardcoded by examining the boundaries of the map in RVIZ
             this_point.x = uniform(-2,2)
             this_point.y = uniform(-2.5,1.5)
             #random y in map
@@ -248,18 +249,30 @@ class ParticleFilter:
 
 
     def normalize_particles(self):
-        #print("length of particle cloud")
-        #print(len(self.particle_cloud))
-        #print("sum of weights before normalized:")
-        #print(sum(part.w for part in self.particle_cloud))
-        norm = 1 / sum(part.w for part in self.particle_cloud)
-        #print("normalizer:")
-        #print(norm)
-        for part in self.particle_cloud:
-            weight = 0
-            weight = norm * part.w
+        
+        res = self.map.info.resolution
+        max_width = self.map.info.width
+        #max_height = self.map.info.height
+        origin_x = self.map.info.origin.position.x
+        origin_y = self.map.info.origin.position.y
 
-            part.w = weight
+        weight_sum = 0
+        for part in self.particle_cloud:
+            
+
+            #convert particle poses from meters to pixels
+            pixel_x = (part.pose.position.x - origin_x) / res
+            pixel_y = (part.pose.position.y - origin_y) / res
+            index = pixel_x + pixel_y * max_width
+            if(self.map.data[index] < 0):
+                part.w = 0
+            weight_sum += part.w
+
+        norm = 1 / weight_su
+
+        
+        for part in self.particle_cloud:
+            part.w = norm * part.w
             #print(part.w)
         #print("sum of weights after normalized:")
         #print(sum(part.w for part in self.particle_cloud))
@@ -472,10 +485,15 @@ class ParticleFilter:
                     dist = self.likelihood_field.get_closest_obstacle_distance(x,y)
                     if math.isnan(dist):
                         dist = 3.5 #haven't been hitting this
-                    #TODO incorporate random and miss z probabilities
+                    
                     sd_scan = 0.1
-                    #print(compute_prob_zero_centered_gaussian(dist, sd_scan))
-                    q = q * compute_prob_zero_centered_gaussian(dist, sd_scan)
+
+                    #approximation for z hit, z random, and z max probailities of laser scan
+                    zhit = 0.85
+                    zrand = 0.05
+                    zmax = 0.1
+                    #incorporate probability of a random scan or max scan into the weight
+                    q = q * (zhit * compute_prob_zero_centered_gaussian(dist, sd_scan) + (zrand/zmax))
                     #print(q)
             part.w = q
             #print(q)
