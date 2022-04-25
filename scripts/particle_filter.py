@@ -139,7 +139,7 @@ class ParticleFilter:
 
 
         # the number of particles used in the particle filter
-        self.num_particles = 3000
+        self.num_particles = 5000
         #they have it at 10000, TODO change back
 
         # initialize the particle cloud array
@@ -472,7 +472,7 @@ class ParticleFilter:
         #loop through particle cloud
         for part in self.particle_cloud:
             q = 1
-            for k in [0, 90, 180, 270]: #[0,45,90,135,180,225,270,315]: #range(360): #for all 360 degrees
+            for k in [0,45,90,135,180,225,270,315]: #range(360): #for all 360 degrees
                 #z is the measurement at range k
                 z = data.ranges[k]
                 #theta is the particles current yaw
@@ -494,9 +494,9 @@ class ParticleFilter:
                     sd_scan = 0.1
 
                     #approximation for z hit, z random, and z max probailities of laser scan
-                    zhit = 0.85
-                    zrand = 0.05
-                    zmax = 0.1
+                    zhit = 0.95
+                    zrand = 0.01
+                    zmax = 0.04
                     #incorporate probability of a random scan or max scan into the weight
                     q = q * (zhit * compute_prob_zero_centered_gaussian(dist, sd_scan) + (zrand/zmax))
                     #print(q)
