@@ -54,6 +54,10 @@ Our robot uses a particle filter and known map to estimate its state. We added t
 
 ### Intialization of Particle Cloud
 
+The code is located in intialize_particle_cloud(). 
+
+The map is imported and all the indexes of the occupancy grid that are known (not negative 1) are stored. These indexes are converted to coordinates in meters, and particles are randomly selected in these positions. Each particle is also given a weight of 1 and a random yaw between pi and -pi, which is converted into a quanterion. All these particles are published to the particle cloud.
+
 ### Movement Model
 
 This code is located in the update_particles_with_motion_model() function, with parameters being passed in from robot_scan_recieved(). A helper function, normalize_radian(), is used.
@@ -72,7 +76,7 @@ Noise is incorporated in two parts of the code, the measurment model (update_par
 
 To see how noise is incorporated into the motion model, read the motion model section above.
 
-TODO, measurement model noise
+Noise was incorporated into the measurement model by calculation the probability that the sensor reading the particle's closest distance matched. Zhit accounted for gaussian error in the reading of the sensor. Z random is the chance that the sensor picked up a random reading and z max the chance it read nothing when an object was there. Both of these give particles slightly higher weights if they don't match the sensor readings well, allowing some particles which aren't exact hits to survive.
 
 ### Updating estimated robot pose
 
@@ -82,10 +86,16 @@ To update the robot's estimated pose, we take the average of the x's, y's and ya
 
 ### Optimization of parameters
 
+When testing our code, we realized we needed more noise in our movement model so that we could correct our particles if they started getting off course from out robot. We also decreased the probabilities of random and max hits in the measurement model so that our particles would converge faster, by taking the laser scan readings to be true values. We also had to adjust the number of angles we read in our measurement model. If we tried to test the laser scanner for all 360 degrees, we encountered many run time errors, so we reduced the angle checking to every 45 degrees to ease the computational load of the code so it could run quicker.
+
 ### Challenges
 
 There were several challenges we encountered with this project. Attempting to run the robot with the full number of particles and the liklihood field scanning 360 degrees resulted in many run time errors, and thus we had to decrease values to test it. Another challenge was working with the PGM map and visualization. RVIZ was an unfamiliar tool and the robot lagged in publishing the particle cloud, causing our cloud to either not appear or too show up not centered on our map. An additional big challenged we encounter was with resampling with replacement. Intially, our resampled cloud would duplicate particles, but when we updated the weight of the same particle in two different locations in the cloud, it would update for both particles. Consequently, we had to redo our resampling code to make a new particle cloud with deep copies. The trial and error process for setting parameters also proved to be difficult. Each run of the robot takes a long time to setup, and it is not always clear whether a tweak in a parameter led to improved performance due to the idiosyncratic nature of each run. 
 
 ### Future Work
 
+Given more time, it would be nice to run even more tests to optimize the parameters of our robot further, our current solutions are "good enough," but it is difficult to determine if they represent true values of the robot. We would also like to implement the path finding for the maze if we had more time. It would also be possible to not intialize particles on walls, which would allow us to converge to our true location even quicker.
+
 ### Takeaways
+
+
