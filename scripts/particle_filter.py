@@ -268,20 +268,23 @@ class ParticleFilter:
         grid = self.grid
 
         weight_sum = 0
+        
+        #loop through particle cloud to get sum of weights 
         for part in self.particle_cloud:
-            
-
             #convert particle poses from meters to pixels
             pixel_x = int((part.pose.position.x - origin_x) / res)
             pixel_y = int((part.pose.position.y - origin_y) / res)
+            #place in occupancy grid
             index = pixel_x + pixel_y * max_width
+            #if particle not on map, set weight to 0
             if(grid[index] < 0):
                 part.w = 0
+            #calculate sum
             weight_sum += part.w
 
         norm = 1 / weight_sum
  
-        
+        #loop through to reassign normalized weights
         for part in self.particle_cloud:
             part.w = norm * part.w
             #print(part.w)
@@ -322,11 +325,12 @@ class ParticleFilter:
         #print(sum(weights))
         #draw a random sample of num_particle particles from the particle cloud
         #where probability are the weights
-        #MOVE THIS TO OTHER FUNCTION
         new_cloud = []
         for i in range(self.num_particles):
+            #draw a particle from cloud based on weights 
             this_choice = choices(self.particle_cloud, weights, k = 1)[0]
-
+            
+            #create entirely new particle with values from the old one, important for deep copy
             new_pos = Point(x = this_choice.pose.position.x,
                             y = this_choice.pose.position.y,
                             z = 0)
@@ -337,6 +341,7 @@ class ParticleFilter:
             w = this_choice.w
             new_part = Particle(pose,w)
             new_cloud.append(new_part)
+         #make particle cloud the new array
         self.particle_cloud = new_cloud
         return 
 
@@ -395,6 +400,8 @@ class ParticleFilter:
 
             x_move = np.abs(curr_x - old_x)
             y_move = np.abs(curr_y - old_y)
+            
+            #normalize_radian allows for change in position across pi
             yaw_move = normalize_radian(curr_yaw - old_yaw)
 
             if (x_move > self.lin_mvmt_threshold or 
@@ -431,8 +438,8 @@ class ParticleFilter:
     def update_estimated_robot_pose(self):
         # based on the particles within the particle cloud, update the robot pose estimate
         
-        #for now, make this a weighted average of all the particles poses
-        #create array of weights
+        #make this a average of all the particles poses
+        #depreciated wieghted averages
 
         sum_x = 0
         sum_y = 0
@@ -454,12 +461,11 @@ class ParticleFilter:
         x_mean = sum_x / self.num_particles
         y_mean = sum_y / self.num_particles
 
-        #to aggregate yaw use circular mean
+        #to aggregate yaw use circular mean from scipy package
         yaw_mean = circmean(yaw_array) 
         #quanternion with converted yaw, yay math
         self.robot_estimate.orientation = Quaternion(
             *quaternion_from_euler(0,0,yaw_mean))
-            #can you just make a new line like this in python
         self.robot_estimate.position.x = x_mean
         self.robot_estimate.position.y = y_mean
         return
