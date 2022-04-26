@@ -82,7 +82,7 @@ Noise was incorporated into the measurement model by calculation the probability
 
 The robot's pose is estimated in update_estimated_robot_pose() which is called in robot_scan_received(). 
 
-To update the robot's estimated pose, we take the average of the x's, y's and yaws of all the particles (using the cicrular mean function from scipy for the average yaw) and set the robot's estimated pose, converting yaw back to a quanternion using the helper function.
+To update the robot's estimated pose, we take the average of the x's, y's and yaws of all the particles (using the cicrular mean function from scipy for the average yaw) and set the robot's estimated pose, converting yaw back to a quanternion using the helper function. We do not take a weighted average because the weights are incorporated into the resampling step and this occurs afterwards.
 
 ### Optimization of parameters
 
@@ -97,5 +97,9 @@ There were several challenges we encountered with this project. Attempting to ru
 Given more time, it would be nice to run even more tests to optimize the parameters of our robot further, our current solutions are "good enough," but it is difficult to determine if they represent true values of the robot. We would also like to implement the path finding for the maze if we had more time. It would also be possible to not intialize particles on walls, which would allow us to converge to our true location even quicker.
 
 ### Takeaways
+
+--Start small and scale up: For many parts of this project, it was much easier to get things working and debug when working at a small scale, e.g. less particles, less angles for measuring, etc... It becomes easier to see the mechanics, even if the code only achieves its goals at scale. Working small also allowed us to see what bugs were caused by our code versus our machines getting run-time errors.
+
+--Run tests outside of the robot environment: Working with the robot is difficult. It requires you to be in lab (or on Gazebo) and takes a long time for each trial. For many mathematical steps, it is possible to test whether the code gives the desired result without doing it in the robot enviornment, allowing for a smoother debugging process.
 
 
