@@ -1,5 +1,7 @@
 # particle_filter_project
 
+![particle filter](https://github.com/emilialim8/particle_filter_project/blob/76ad9fad75296be2f516a3b92519ec234422e725/particle_filter.gif)
+
 ##  Implementation Plan
 Emilia Lim and Sam Nitkin
 
