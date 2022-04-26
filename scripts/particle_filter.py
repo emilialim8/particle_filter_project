@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
 
-
-'''TO DO
-- continue calibrating parameters, more angles, num particles, sds
-- initialize particles in maze
-- out of maze checking
-- add noise to liklihood field according to model
-
-'''
 from cmath import pi
 import rospy
 
@@ -139,9 +131,8 @@ class ParticleFilter:
 
 
         # the number of particles used in the particle filter
-        self.num_particles = 5000
-        #they have it at 10000, TODO change back
-
+        self.num_particles = 10000
+      
         # initialize the particle cloud array
         self.particle_cloud = []
 
@@ -153,7 +144,6 @@ class ParticleFilter:
         self.ang_mvmt_threshold = (np.pi / 6)
 
         self.odom_pose_last_motion_update = None
-
 
         # Setup publishers and subscribers
 
@@ -179,16 +169,21 @@ class ParticleFilter:
         self.initialize_particle_cloud()
         print("particle cloud intialized")
         
+        
         #for testing particle cloud intialization
         r = rospy.Rate(1)
+        r.sleep()
+        #publish to make sure robot has time to publish
+        self.publish_particle_cloud()
 
+        '''
         for i in range(10):
             print(self.particle_cloud[i].pose.position)
             print(self.particle_cloud[i].pose.orientation)
             r.sleep()
             #publish to make sure robot has time to publish
             self.publish_particle_cloud()
-        
+        '''
 
         self.initialized = True
 
@@ -198,9 +193,11 @@ class ParticleFilter:
 
         self.map = data
 
+        '''
+        for debugging map info
         print("width: " + str(self.map.info.width) + ", height: " + str(self.map.info.width) )
         print("origin " + str(self.map.info.origin.position.x) + ", " +str(self.map.info.origin.position.y))
-        
+        '''
     
 
 
@@ -215,11 +212,11 @@ class ParticleFilter:
         #max_width = 10
         #max_height = 10
 
-        on_map = []
-        for i in range(len(self.grid)):
+        on_map = [] #array for indexes of occupancy grid that are part of maze
+        for i in range(len(self.grid)): #loop through entire occupancy grid
             if (self.grid[i] >= 0):
-                on_map.append(i)
-        print(on_map)
+                on_map.append(i) #add indexes that are known
+        #print(on_map)
         #iterate through number of particles to 
         #randomly intialize each particle
         for i in range(self.num_particles):
@@ -228,9 +225,11 @@ class ParticleFilter:
             #random x in map
             #this_point.x = (randint(0, 60) * res + origin_x) 
             #these values are hardcoded by examining the boundaries of the map in RVIZ
-            this_index = choices(on_map)[0]
-            this_point.x = (this_index % max_width) * res + origin_x#int(this_index / max_width) * res +  origin_y
-            this_point.y = int(this_index / max_width) * res + origin_y#(this_index - (this_point.y * max_width)) * res + origin_x
+            this_index = choices(on_map)[0] #choose a random point on the map
+            
+            #convert indexes to positions
+            this_point.x = (this_index % max_width) * res + origin_x
+            this_point.y = int(this_index / max_width) * res + origin_y
             #random y in map
             #this_point.y = (randint(0, 60) * res + origin_y) 
             this_point.z = 0 #2D
@@ -260,6 +259,7 @@ class ParticleFilter:
 
     def normalize_particles(self):
         
+        #occupancy grid information
         res = self.map.info.resolution
         max_width = self.map.info.width
         #max_height = self.map.info.height
